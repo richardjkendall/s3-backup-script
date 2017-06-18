@@ -1,0 +1,9 @@
+{
+	"aws_profile": "backup",
+	"bucket": "rjk-backupdata",
+	"id": "garagepi",
+	"folders": [
+		"/etc",
+		"/home/rjk"
+		]
+}
