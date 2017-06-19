@@ -3,7 +3,10 @@
 	"bucket": "rjk-backupdata",
 	"id": "garagepi",
 	"folders": [
-		"/etc",
+		"/etc/apache2",
+		"/opt/garageapi",
+		"/var/www",
+		"/etc/network",
 		"/home/rjk"
 		]
 }

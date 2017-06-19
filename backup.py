@@ -1,9 +1,10 @@
 import boto3
 import logging
 import json
+import os
 from datetime import date
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(levelname)s] (%(threadName)-10s) %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] (%(threadName)-10s) %(message)s')
 
 class BackupAgent():
 
@@ -21,6 +22,7 @@ class BackupAgent():
 		self.create_s3_subfolder(settings["bucket"], settings["id"], d)
 		for folder in settings["folders"]:
 			logging.info("Working on folder: {f}".format(f=folder))
+			self.sync_local_to_s3(settings["bucket"], settings["id"], d, folder)
 	
 	def create_s3_session(self, profile):
 		logging.info("Creating AWS S3 client for profile: {p}".format(p=profile))
@@ -29,14 +31,28 @@ class BackupAgent():
 	
 	def create_s3_subfolder(self, bucket, agentid, d):
 		b = self.s3client.Bucket(bucket)
-		key = "{b}/{a}/{d}".format(b=bucket, a=agentid, d=d)
+		key = "{a}/{d}/backup".format(b=bucket, a=agentid, d=d)
 		logging.info("Checking if folder {f} exists...".format(f=key))
 		objs = list(b.objects.filter(Prefix=key))
 		if len(objs) > 0 and objs[0].key == key:
 			logging.info("Folder exists already")
 		else:
 			logging.info("Folder does not exist, creating...")
-
+			b.put_object(Key=key)
+	
+	def sync_local_to_s3(self, bucket, agentid, d, localdir):
+		b = self.s3client.Bucket(bucket)
+		logging.info("Scanning '{dir}'".format(dir=localdir))
+		destination = "{a}/{d}{l}".format(a=agentid, d=d, l=localdir)
+		for root, dirs, files in os.walk(localdir):
+			for filename in files:
+				local_path = os.path.join(root, filename)
+				rel_path = os.path.relpath(local_path, localdir)
+				s3_path = os.path.join(destination, rel_path)
+				logging.info("File {file} -> {s3}".format(file=local_path, s3=s3_path))
+				b.upload_file(local_path, s3_path)
+				logging.info("{local} uploaded".format(local=local_path))
+				
 
 def run_program():
 	logging.info("Starting backup script...")
@@ -45,7 +61,6 @@ def run_program():
 		s = json.load(settings_file)
 	ba = BackupAgent(settings=s)
 	ba.perform_backup()
-	
 
 if __name__ == '__main__':
 	run_program()
