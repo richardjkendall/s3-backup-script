@@ -4,8 +4,7 @@ import json
 import os
 from datetime import date
 
-#logging.basicConfig(level=logging.INFO, filename="backup.log", format='%(asctime)s [%(levelname)s] (%(threadName)-10s) %(message)s')
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] (%(threadName)-10s) %(message)s')
+logging.basicConfig(level=logging.INFO, filename="backup.log", format='%(asctime)s [%(levelname)s] (%(threadName)-10s) %(message)s')
 
 class BackupAgent():
 
