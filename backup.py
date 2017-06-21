@@ -2,6 +2,7 @@ import boto3
 import logging
 import json
 import os
+import sys
 from datetime import date
 
 logging.basicConfig(level=logging.INFO, filename="backup.log", format='%(asctime)s [%(levelname)s] (%(threadName)-10s) %(message)s')
@@ -19,15 +20,20 @@ class BackupAgent():
 		logging.info("Number of folders to backup: {count}".format(count=len(settings["folders"])))
 		d = date.today().strftime("%Y%m%d")
 		logging.info("Folder in S3 bucket: {id}/{date}".format(date=d, id=settings["id"]))
-		try:
-			self.create_s3_session(settings["aws_profile"])
-			self.create_s3_subfolder(settings["bucket"], settings["id"], d)
-			for folder in settings["folders"]:
-				logging.info("Working on folder: {f}".format(f=folder))
-				if self.sync_local_to_s3(settings["bucket"], settings["id"], d, folder) == False:
-					success = False
-		except e:
-			logging.error("Exception during backup process {0}".format(e))
+		#try:
+		self.create_s3_session(settings["aws_profile"])
+		self.create_s3_subfolder(settings["bucket"], settings["id"], d)
+		for folder in settings["folders"]:
+			logging.info("Working on folder: {f}".format(f=folder))
+			if self.sync_local_to_s3(settings["bucket"], settings["id"], d, folder) == False:
+				success = False
+		
+		for file in settings["files"]:
+			logging.info("Working on file: {f}".format(f=file))
+			if self.sync_single_file_to_s3(settings["bucket"], settings["id"], d, file) == False:
+				success = False
+		#except:
+		#	logging.error("Exception during backup process {0}".format(sys.exc_info()[0]))
 		return success
 	
 	def create_s3_session(self, profile):
@@ -57,12 +63,24 @@ class BackupAgent():
 					local_path = os.path.join(root, filename)
 					rel_path = os.path.relpath(local_path, localdir)
 					s3_path = os.path.join(destination, rel_path)
-					logging.info("File {file} -> {s3}".format(file=local_path, s3=s3_path))
+					logging.info("File {file} -> {s3}".format(file=local_path.encode("utf-8").strip(), s3=s3_path.encode("utf-8").strip()))
 					b.upload_file(local_path, s3_path)
-					logging.info("{local} uploaded".format(local=local_path))
+					logging.info("{local} uploaded".format(local=local_path.encode("utf-8").strip()))
 				except OSError as e:
 					success = False
 					logging.error("Hit error while backing up: {0}".format(e))
+		return success
+
+	def sync_single_file_to_s3(self, bucket, agentid, d, localfile):
+		success = True
+		b = self.s3client.Bucket(bucket)
+		destination = "{a}/{d}{l}".format(a=agentid, d=d, l=localfile)
+		try:
+			logging.info("Single file sync {l} -> {s3}".format(l=localfile, s3=destination))
+			b.upload_file(localfile, destination)
+		except OSError as e:
+			success = False
+			logging.error("Hit error while backing up: {0}".format(e))
 		return success
 
 def run_program():
