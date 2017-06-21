@@ -8,5 +8,6 @@
 		"/var/www",
 		"/etc/network",
 		"/home/rjk"
-		]
+		],
+	"files": []
 }
